@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>REAKTR — Instagram Auto DM Platform</title>
+    <meta name="description" content="Open-source Instagram comment-to-DM automation platform" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #060608; color: #e2e8f0; font-family: 'Courier New', monospace; }
+      #root { min-height: 100vh; }
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: #060608; }
+      ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+      select option { background: #0a0a0f; }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.4; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
