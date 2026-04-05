@@ -6,6 +6,7 @@ import { Messenger } from '../_messenger.js';
 import { ok, created, bad, unauth, notFound, serverErr, cors, authCheck, CORS } from '../_utils.js';
 
 export async function onRequest({ request, env }) {
+  console.log('APP ID:', env.META_APP_ID);
   const url    = new URL(request.url);
   const method = request.method;
   const path   = url.pathname.replace(/^\/api/, '').replace(/\/$/, '') || '/';
