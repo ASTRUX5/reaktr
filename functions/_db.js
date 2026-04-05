@@ -14,12 +14,23 @@ export class DB {
       `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, ig_user_id TEXT, account_id TEXT, flow_id TEXT, step_id TEXT, context TEXT, awaiting TEXT, lead_next TEXT, lead_field TEXT, status TEXT DEFAULT 'active', started_at TEXT, last_active TEXT, _ts TEXT)`,
       `CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, type TEXT, account_id TEXT, ig_user_id TEXT, flow_id TEXT, trigger_id TEXT, keyword TEXT, media_id TEXT, field TEXT, sent_count INTEGER, detail TEXT, ts TEXT, _ts TEXT)`,
       `CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, account_id TEXT, ig_user_id TEXT, flow_id TEXT, field TEXT, value TEXT, ts TEXT, _ts TEXT)`,
-      `CREATE TABLE IF NOT EXISTS processed_comments (comment_id TEXT PRIMARY KEY, ig_user_id TEXT, account_id TEXT, ts TEXT, _ts TEXT)`,
+      `CREATE TABLE IF NOT EXISTS processed_comments (id TEXT PRIMARY KEY, comment_id TEXT UNIQUE, ig_user_id TEXT, account_id TEXT, ts TEXT, _ts TEXT)`,
     ];
     for (const sql of tables) {
       await this.d1.prepare(sql).run();
     }
     // Migrations — safely add new columns to existing tables
+    // Recreate processed_comments if it has old schema (comment_id as PK, no id column)
+    try {
+      await this.d1.prepare('INSERT INTO processed_comments (id, comment_id) VALUES (?,?) ON CONFLICT DO NOTHING').bind('test','test').run();
+      await this.d1.prepare("DELETE FROM processed_comments WHERE id='test'").run();
+    } catch {
+      // Old schema — drop and recreate
+      await this.d1.prepare('DROP TABLE IF EXISTS processed_comments_old').run().catch(()=>{});
+      await this.d1.prepare('ALTER TABLE processed_comments RENAME TO processed_comments_old').run().catch(()=>{});
+      await this.d1.prepare('CREATE TABLE IF NOT EXISTS processed_comments (id TEXT PRIMARY KEY, comment_id TEXT UNIQUE, ig_user_id TEXT, account_id TEXT, ts TEXT, _ts TEXT)').run().catch(()=>{});
+    }
+
     const migrations = [
       'ALTER TABLE triggers ADD COLUMN dm_url TEXT',
       'ALTER TABLE triggers ADD COLUMN dm_button_label TEXT',
