@@ -43,7 +43,14 @@ export async function onRequestPost({ request, env, waitUntil }) {
 async function processEvent(body, env) {
   if (body.object !== 'instagram') return;
 
-  const db = new DB(env);
+  let db;
+  try {
+    db = new DB(env);
+    await db.init();
+  } catch(e) {
+    console.error('[DB Init Error]', e.message);
+    return;
+  }
 
   for (const entry of body.entry ?? []) {
     // Look up the connected account by Instagram Business Account ID
