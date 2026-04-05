@@ -33,7 +33,6 @@ export async function onRequest({ request, env }) {
         'instagram_manage_messages',
         'instagram_manage_comments',
         'instagram_manage_insights',
-        'pages_messaging',
         'pages_read_engagement',
       ].join(',');
       const oauthUrl =
