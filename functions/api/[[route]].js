@@ -20,10 +20,10 @@ export async function onRequest(context) {
 
   // ── Auth check (all routes except /auth) ─────────────────────
   if (!path.startsWith('/auth')) {
-    if (!authCheck(request, env)) return unauth();
+  if (!authCheck(request, env)) return unauth();
   }
 
-  const db = new DB({ env });
+const db = new DB({ env }); // ✅ FIXED
 
   try {
     // ══════════════════════════════════════════════════════════
