@@ -1,7 +1,7 @@
 // ─── REAKTR · Meta Graph API Messenger ────────────────────────────────────────
 // Handles all DM sending: text, button templates, quick replies, typing states
 
-const GRAPH = 'https://graph.facebook.com/v20.0';
+const GRAPH = 'https://graph.facebook.com/v25.0';
 
 export class Messenger {
   constructor(pageAccessToken) {
@@ -29,7 +29,7 @@ export class Messenger {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({ recipient: { id: recipientId }, sender_action: action }),
-    }).catch(() => {});   // non-critical, swallow errors
+    }).catch(() => {});
   }
 
   // ── Sender actions ────────────────────────────────────────────
@@ -37,12 +37,12 @@ export class Messenger {
   typingOff(id) { return this._action(id, 'typing_off'); }
   markSeen (id) { return this._action(id, 'mark_seen');  }
 
-  // ── Human-like delay (randomised) ────────────────────────────
+  // ── Human-like delay ─────────────────────────────────────────
   delay(min = 700, max = 1500) {
     return new Promise(r => setTimeout(r, min + Math.random() * (max - min)));
   }
 
-  // ── Pre-send ritual (mark seen + simulate typing) ─────────────
+  // ── Pre-send ritual ──────────────────────────────────────────
   async prelude(id, ms = 1000) {
     await this.markSeen(id);
     await this.typingOn(id);
@@ -83,7 +83,6 @@ export class Messenger {
     });
   }
 
-  // generic template - carousel of cards
   async generic(id, elements) {
     await this.prelude(id, 1000);
     return this._send(id, {
@@ -110,7 +109,7 @@ export class Messenger {
     return { type: 'postback', title: String(b.title).slice(0, 20), payload: b.payload };
   }
 
-  // ── Reply to a comment (public reply, not DM) ─────────────────
+  // ── Reply to a comment ────────────────────────────────────────
   async replyToComment(commentId, message) {
     const res = await fetch(`${GRAPH}/${commentId}/replies?access_token=${this.token}`, {
       method : 'POST',
@@ -120,7 +119,7 @@ export class Messenger {
     return res.json();
   }
 
-  // ── Check if user follows the IG Business Account ─────────────
+  // ── Check if user follows IG account ──────────────────────────
   async isFollower(igUserId, igBusinessId) {
     try {
       const res = await fetch(
@@ -130,7 +129,7 @@ export class Messenger {
       const data = await res.json();
       return !!(data.data?.length > 0);
     } catch {
-      return false; // default: assume not following
+      return false;
     }
   }
 
@@ -151,7 +150,7 @@ export class Messenger {
   // ── Get IG Business Account from Page token ───────────────────
   static async getIGAccount(pageId, pageToken) {
     const res = await fetch(
-      `${GRAPH}/${pageId}?fields=instagram_business_account{id,username,name,profile_picture_url}&access_token=${pageToken}`
+      `${GRAPH}/${pageId}?fields=instagram_business_account&access_token=${pageToken}`
     );
     return res.json();
   }
