@@ -265,6 +265,34 @@ const db = new DB(env);
     // BROADCAST
     // ══════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════
+    // REELS — fetch latest media from Instagram account
+    // ══════════════════════════════════════════════════════════
+
+    if (path === '/reels' && method === 'GET') {
+      const accountId = url.searchParams.get('account_id');
+      if (!accountId) return bad('account_id required');
+
+      const account = await db.findOne('accounts', { _id: db.oid(accountId) });
+      if (!account) return notFound('Account not found');
+
+      const fields = 'id,media_type,thumbnail_url,media_url,timestamp,caption,permalink';
+      const igRes  = await fetch(
+        `https://graph.facebook.com/v25.0/${account.ig_id}/media` +
+        `?fields=${fields}&limit=18&access_token=${account.page_access_token}`
+      );
+      const igData = await igRes.json();
+
+      if (igData.error) throw new Error(igData.error.message);
+
+      // Return only VIDEO and REEL types (skip images)
+      const reels = (igData.data ?? []).filter(m =>
+        m.media_type === 'VIDEO' || m.media_type === 'REEL' || m.media_type === 'CAROUSEL_ALBUM'
+      );
+
+      return ok({ reels });
+    }
+
     if (path === '/broadcast' && method === 'POST') {
       const { account_id, message, buttons, segment } = await request.json();
 
