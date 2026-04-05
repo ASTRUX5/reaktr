@@ -10,6 +10,7 @@ export async function onRequest(context) {
   const { request, env } = context;
 
   console.log('APP ID:', env.META_APP_ID);
+
   const url    = new URL(request.url);
   const method = request.method;
   const path   = url.pathname.replace(/^\/api/, '').replace(/\/$/, '') || '/';
@@ -32,17 +33,21 @@ export async function onRequest(context) {
     // GET /api/auth/url — build Meta OAuth URL
     if (path === '/auth/url' && method === 'GET') {
       const redirectUri = encodeURIComponent(`${url.origin}/api/auth/callback`);
+
       const scopes = [
+        'pages_show_list',
+        'pages_read_engagement',
+        'business_management',
         'instagram_basic',
         'instagram_manage_messages',
         'instagram_manage_comments',
         'instagram_manage_insights',
-        'pages_read_engagement',
-        'pages_show_list',
       ].join(',');
+
       const oauthUrl =
-        `https://www.facebook.com/dialog/oauth?client_id=${env.META_APP_ID}` +
-        `&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code`;
+        `https://www.facebook.com/v25.0/dialog/oauth?client_id=${env.META_APP_ID}` +
+        `&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code&auth_type=rerequest`;
+
       return ok({ url: oauthUrl });
     }
 
@@ -51,7 +56,8 @@ export async function onRequest(context) {
       const code        = url.searchParams.get('code');
       const redirectUri = `${url.origin}/api/auth/callback`;
 
-      // Exchange code for short-lived user token
+      if (!code) return bad('Missing code');
+
       const tokenRes = await fetch(
         `https://graph.facebook.com/v20.0/oauth/access_token` +
         `?client_id=${env.META_APP_ID}` +
@@ -59,15 +65,14 @@ export async function onRequest(context) {
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
         `&code=${code}`
       );
+
       const tokenData = await tokenRes.json();
       if (tokenData.error) throw new Error(tokenData.error.message);
 
-      // Get long-lived token
       const longToken = await Messenger.refreshToken(
         tokenData.access_token, env.META_APP_ID, env.META_APP_SECRET
       );
 
-      // Get user's pages
       const pagesRes  = await fetch(
         `https://graph.facebook.com/v20.0/me/accounts?access_token=${longToken}`
       );
@@ -76,19 +81,18 @@ export async function onRequest(context) {
       console.log('PAGES DATA:', JSON.stringify(pagesData, null, 2));
 
       const saved = [];
+
       for (const page of pagesData.data ?? []) {
 
         console.log('PAGE:', JSON.stringify(page, null, 2));
 
-        // Get connected IG account
         const igData = await Messenger.getIGAccount(page.id, page.access_token);
 
         console.log('IG DATA:', JSON.stringify(igData, null, 2));
 
-        const ig     = igData.instagram_business_account;
+        const ig = igData.instagram_business_account;
         if (!ig) continue;
 
-        // Upsert account
         await db.updateOne('accounts',
           { ig_id: ig.id },
           {
@@ -106,10 +110,10 @@ export async function onRequest(context) {
           },
           true
         );
+
         saved.push(ig.username);
       }
 
-      // Redirect to dashboard
       return Response.redirect(`${url.origin}/#/accounts?connected=${saved.join(',')}`, 302);
     }
 
@@ -120,7 +124,9 @@ export async function onRequest(context) {
     if (path === '/accounts' && method === 'GET') {
       const accounts = await db.find('accounts', {}, { connected_at: -1 });
       return ok(accounts.map(a => ({
-        ...a, page_access_token: undefined, user_token: undefined,
+        ...a,
+        page_access_token: undefined,
+        user_token: undefined,
       })));
     }
 
