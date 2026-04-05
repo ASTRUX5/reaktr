@@ -29,12 +29,13 @@ export async function onRequest({ request, env }) {
     if (path === '/auth/url' && method === 'GET') {
       const redirectUri = encodeURIComponent(`${url.origin}/api/auth/callback`);
       const scopes = [
-        'instagram_basic',
-        'instagram_manage_messages',
-        'instagram_manage_comments',
-        'instagram_manage_insights',
-        'pages_read_engagement',
-      ].join(',');
+  'instagram_basic',
+  'instagram_manage_messages',
+  'instagram_manage_comments',
+  'instagram_manage_insights',
+  'pages_read_engagement',
+  'pages_show_list',
+].join(',');
       const oauthUrl =
         `https://www.facebook.com/dialog/oauth?client_id=${env.META_APP_ID}` +
         `&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code`;
