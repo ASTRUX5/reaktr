@@ -94,6 +94,17 @@ function Login({ onLogin }) {
         }}>
           Set DASHBOARD_SECRET in<br/>Cloudflare environment variables
         </p>
+        <div style={{
+          display:'flex', justifyContent:'center', gap:24, marginTop:20,
+          paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.07)',
+        }}>
+          <a href="/privacy.html" target="_blank" rel="noreferrer" style={{
+            color:'rgba(255,255,255,0.35)', fontSize:12, textDecoration:'none',
+          }}>Privacy Policy</a>
+          <a href="/terms.html" target="_blank" rel="noreferrer" style={{
+            color:'rgba(255,255,255,0.35)', fontSize:12, textDecoration:'none',
+          }}>Terms of Service</a>
+        </div>
       </div>
     </div>
   );
