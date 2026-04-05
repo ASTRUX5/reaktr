@@ -29,13 +29,13 @@ export async function onRequest({ request, env }) {
     if (path === '/auth/url' && method === 'GET') {
       const redirectUri = encodeURIComponent(`${url.origin}/api/auth/callback`);
       const scopes = [
-  'instagram_basic',
-  'instagram_manage_messages',
-  'instagram_manage_comments',
-  'instagram_manage_insights',
-  'pages_read_engagement',
-  'pages_show_list',
-].join(',');
+        'instagram_basic',
+        'instagram_manage_messages',
+        'instagram_manage_comments',
+        'instagram_manage_insights',
+        'pages_read_engagement',
+        'pages_show_list',
+      ].join(',');
       const oauthUrl =
         `https://www.facebook.com/dialog/oauth?client_id=${env.META_APP_ID}` +
         `&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code`;
@@ -69,10 +69,18 @@ export async function onRequest({ request, env }) {
       );
       const pagesData = await pagesRes.json();
 
+      console.log('PAGES DATA:', JSON.stringify(pagesData, null, 2));
+
       const saved = [];
       for (const page of pagesData.data ?? []) {
+
+        console.log('PAGE:', JSON.stringify(page, null, 2));
+
         // Get connected IG account
         const igData = await Messenger.getIGAccount(page.id, page.access_token);
+
+        console.log('IG DATA:', JSON.stringify(igData, null, 2));
+
         const ig     = igData.instagram_business_account;
         if (!ig) continue;
 
@@ -92,7 +100,7 @@ export async function onRequest({ request, env }) {
               connected_at      : new Date().toISOString(),
             },
           },
-          true  // upsert
+          true
         );
         saved.push(ig.username);
       }
@@ -107,7 +115,6 @@ export async function onRequest({ request, env }) {
 
     if (path === '/accounts' && method === 'GET') {
       const accounts = await db.find('accounts', {}, { connected_at: -1 });
-      // Hide sensitive tokens
       return ok(accounts.map(a => ({
         ...a, page_access_token: undefined, user_token: undefined,
       })));
@@ -253,7 +260,6 @@ export async function onRequest({ request, env }) {
       const account = await db.findOne('accounts', { _id: db.oid(account_id) });
       if (!account) return notFound('Account not found');
 
-      // Get unique user IDs from sessions
       const sessionFilter = { account_id: account_id };
       if (segment === 'leads') {
         const leads = await db.find('leads', { account_id: account_id });
@@ -275,7 +281,6 @@ export async function onRequest({ request, env }) {
             await msg.text(userId, message);
           }
           sent++;
-          // Humanize: small delay between each broadcast message
           await new Promise(r => setTimeout(r, 300 + Math.random() * 200));
         } catch (e) {
           console.error(`Broadcast failed for ${userId}:`, e.message);
