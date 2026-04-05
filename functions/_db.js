@@ -12,7 +12,7 @@ export class DB {
     const tables = [
       `CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, ig_id TEXT UNIQUE, username TEXT, name TEXT, profile_pic TEXT, page_id TEXT, page_access_token TEXT, user_token TEXT, active INTEGER DEFAULT 1, connected_at TEXT, _ts TEXT)`,
       `CREATE TABLE IF NOT EXISTS flows (id TEXT PRIMARY KEY, account_id TEXT, name TEXT, description TEXT, steps TEXT, active INTEGER DEFAULT 1, created_at TEXT, _ts TEXT)`,
-      `CREATE TABLE IF NOT EXISTS triggers (id TEXT PRIMARY KEY, account_id TEXT, flow_id TEXT, name TEXT, keywords TEXT, match_type TEXT DEFAULT 'contains', media_id TEXT DEFAULT 'any', comment_reply TEXT, active INTEGER DEFAULT 1, created_at TEXT, _ts TEXT)`,
+      `CREATE TABLE IF NOT EXISTS triggers (id TEXT PRIMARY KEY, account_id TEXT, flow_id TEXT, name TEXT, keywords TEXT, match_type TEXT DEFAULT 'contains', media_id TEXT DEFAULT 'any', comment_reply TEXT, dm_url TEXT, dm_button_label TEXT, active INTEGER DEFAULT 1, created_at TEXT, _ts TEXT)`,
       `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, ig_user_id TEXT, account_id TEXT, flow_id TEXT, step_id TEXT, context TEXT, awaiting TEXT, lead_next TEXT, lead_field TEXT, status TEXT DEFAULT 'active', started_at TEXT, last_active TEXT, _ts TEXT)`,
       `CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, type TEXT, account_id TEXT, ig_user_id TEXT, flow_id TEXT, trigger_id TEXT, keyword TEXT, media_id TEXT, field TEXT, sent_count INTEGER, ts TEXT, _ts TEXT)`,
       `CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, account_id TEXT, ig_user_id TEXT, flow_id TEXT, field TEXT, value TEXT, ts TEXT, _ts TEXT)`,
@@ -20,6 +20,15 @@ export class DB {
     ];
     for (const sql of tables) {
       await this.d1.prepare(sql).run();
+    }
+
+    // ── Migrations: add new columns to existing tables ──────────
+    const migrations = [
+      'ALTER TABLE triggers ADD COLUMN dm_url TEXT',
+      'ALTER TABLE triggers ADD COLUMN dm_button_label TEXT',
+    ];
+    for (const sql of migrations) {
+      try { await this.d1.prepare(sql).run(); } catch {} // ignore if column already exists
     }
   }
 
