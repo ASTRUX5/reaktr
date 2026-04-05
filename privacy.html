@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Privacy Policy — REAKTR</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#07070F;color:#fff;font-family:'DM Sans',sans-serif;line-height:1.7}
+body::before{content:'';position:fixed;top:-200px;left:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(49,236,86,0.06) 0%,transparent 70%);pointer-events:none}
+body::after{content:'';position:fixed;bottom:-150px;right:-150px;width:400px;height:400px;background:radial-gradient(circle,rgba(238,114,248,0.06) 0%,transparent 70%);pointer-events:none}
+.wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px;position:relative;z-index:1}
+.logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;background:linear-gradient(135deg,#31EC56,#EE72F8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.badge{display:inline-block;background:rgba(49,236,86,0.12);border:1px solid rgba(49,236,86,0.3);color:#31EC56;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:600;letter-spacing:1px;margin-bottom:32px}
+h1{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;margin-bottom:8px;line-height:1.2}
+.updated{color:rgba(255,255,255,0.35);font-size:13px;margin-bottom:40px}
+h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#EE72F8;margin:36px 0 12px}
+p{color:rgba(255,255,255,0.7);font-size:15px;margin-bottom:14px}
+ul{color:rgba(255,255,255,0.7);font-size:15px;padding-left:20px;margin-bottom:14px}
+ul li{margin-bottom:6px}
+.card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:20px;padding:24px;margin-bottom:14px}
+.contact-box{background:rgba(49,236,86,0.08);border:1px solid rgba(49,236,86,0.25);border-radius:20px;padding:24px;margin-top:40px}
+.contact-box p{color:rgba(255,255,255,0.8)}
+a{color:#31EC56;text-decoration:none}
+a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid rgba(255,255,255,0.07);margin:36px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">REAKTR</div>
+  <div class="badge">PRIVACY POLICY</div>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: January 1, 2025</div>
+
+  <div class="card">
+    <p>REAKTR ("we", "our", or "us") operates an open-source Instagram automation platform that enables users to automate direct messages in response to Instagram comments. This Privacy Policy explains how we collect, use, and protect information when you use our platform.</p>
+  </div>
+
+  <h2>1. Information We Collect</h2>
+  <p>When you connect your Instagram Business account to REAKTR, we collect and store the following:</p>
+  <ul>
+    <li>Your Instagram Business Account ID and username</li>
+    <li>Your Facebook Page ID and Page Access Token (encrypted)</li>
+    <li>Your Instagram profile picture and display name</li>
+    <li>Comment data (commenter's Instagram User ID and comment text) required to trigger automated flows</li>
+    <li>Lead data voluntarily submitted by your followers through DM conversations (e.g. email addresses) — only when you have a Lead Capture step configured</li>
+    <li>Message delivery and interaction events for analytics purposes</li>
+  </ul>
+
+  <h2>2. How We Use Your Information</h2>
+  <p>We use the information we collect solely to:</p>
+  <ul>
+    <li>Deliver automated DM flows to users who trigger them by commenting on your content</li>
+    <li>Display analytics and performance metrics on your dashboard</li>
+    <li>Manage your connected Instagram accounts and automation flows</li>
+    <li>Refresh access tokens to maintain uninterrupted service</li>
+  </ul>
+  <p>We do not sell, rent, or share your data or your followers' data with any third parties for advertising or marketing purposes.</p>
+
+  <h2>3. Meta Platform Data</h2>
+  <p>REAKTR uses the Meta Graph API (Instagram Messaging API) and complies with Meta's Platform Terms and Developer Policies. We access only the permissions necessary to deliver the automation service:</p>
+  <ul>
+    <li><strong>instagram_manage_messages</strong> — to send automated DMs</li>
+    <li><strong>instagram_manage_comments</strong> — to detect comment triggers</li>
+    <li><strong>instagram_basic</strong> — to read account profile information</li>
+    <li><strong>pages_messaging</strong> — to send messages via connected Facebook Page</li>
+    <li><strong>pages_read_engagement</strong> — to read engagement data</li>
+  </ul>
+  <p>All data obtained through Meta APIs is used exclusively for the purpose of delivering the requested automation and is not used for any other purpose.</p>
+
+  <h2>4. Data Storage & Security</h2>
+  <p>Your data is stored in a secure database (Cloudflare D1 or MongoDB Atlas depending on your deployment). Access tokens are stored securely and are only used to make authorised API calls on your behalf.</p>
+  <p>Since REAKTR is self-hosted and open-source, you are responsible for the security of your own deployment. We recommend keeping your environment variables private and using strong secret keys.</p>
+
+  <h2>5. Data Retention</h2>
+  <p>We retain your data for as long as your account is active. You may delete your connected account at any time from the REAKTR dashboard, which will remove your access tokens and stop all automation. You may also purge all stored data by deleting your database.</p>
+
+  <h2>6. Third-Party Services</h2>
+  <p>REAKTR integrates with the following third-party services:</p>
+  <ul>
+    <li><strong>Meta (Facebook/Instagram)</strong> — for comment detection and DM delivery</li>
+    <li><strong>Cloudflare</strong> — for hosting and serverless function execution</li>
+    <li><strong>MongoDB Atlas</strong> (optional) — for data storage</li>
+    <li><strong>Anthropic Claude API</strong> (optional) — for AI intent detection features</li>
+  </ul>
+
+  <h2>7. User Rights</h2>
+  <p>You have the right to:</p>
+  <ul>
+    <li>Access all data we store about your account</li>
+    <li>Delete your account and all associated data at any time</li>
+    <li>Revoke REAKTR's access to your Instagram account via Meta's connected apps settings</li>
+    <li>Request a copy of your stored data</li>
+  </ul>
+
+  <h2>8. Children's Privacy</h2>
+  <p>REAKTR is not directed at children under the age of 13. We do not knowingly collect personal information from children.</p>
+
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. We will notify users of any material changes by updating the "Last updated" date at the top of this page.</p>
+
+  <hr/>
+
+  <div class="contact-box">
+    <h2 style="margin-top:0;color:#31EC56">10. Contact Us</h2>
+    <p>If you have any questions about this Privacy Policy or how we handle your data, please contact us at:</p>
+    <p style="margin-top:12px"><strong style="color:#fff">REAKTR Open Source Project</strong><br/>
+    GitHub: <a href="https://github.com">github.com/YOUR-USERNAME/reaktr</a></p>
+  </div>
+</div>
+</body>
+</html>
