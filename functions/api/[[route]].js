@@ -23,7 +23,7 @@ export async function onRequest(context) {
     if (!authCheck(request, env)) return unauth();
   }
 
-  const db = new DB(env);
+  const db = new DB({ env });
 
   try {
     // ══════════════════════════════════════════════════════════
