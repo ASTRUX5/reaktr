@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Card, Btn, PageTitle, Badge, EmptyState, Modal, Input, RSelect, Textarea, colors } from '../components/Layout.jsx';
+import { Card, Btn, PageTitle, Badge, EmptyState, Modal, FullScreen, Input, RSelect, Textarea, SectionLabel, colors } from '../components/Layout.jsx';
 import { IcFlow, IcPlus, IcTrash, IcPause, IcPlay, IcArrowUp, IcArrowDown, IcLink, IcMail, IcTrigger, IcClock, IcCheck, IcKey } from '../components/Icons.jsx';
 import { api } from '../lib/api.js';
 const {G,P,V} = colors;
 
 const STEP_TYPES = [
-  {value:'text',          label:'Text Message',    color:'#60A5FA', Icon:IcTrigger},
-  {value:'buttons',       label:'Button Template', color:V,         Icon:IcKey},
-  {value:'quick_replies', label:'Quick Replies',   color:G,         Icon:IcCheck},
-  {value:'follow_gate',   label:'Follow Gate',     color:G,         Icon:IcCheck},
-  {value:'url_button',    label:'URL Button',      color:'#FBBF24', Icon:IcLink},
-  {value:'lead_capture',  label:'Lead Capture',    color:P,         Icon:IcMail},
-  {value:'delay',         label:'Delay / Wait',    color:'#64748b', Icon:IcClock},
+  {value:'text',          label:'Text Message',  color:'#60A5FA', Icon:IcTrigger},
+  {value:'buttons',       label:'Buttons',        color:V,         Icon:IcKey},
+  {value:'quick_replies', label:'Quick Replies',  color:G,         Icon:IcCheck},
+  {value:'follow_gate',   label:'Follow Gate',    color:G,         Icon:IcCheck},
+  {value:'url_button',    label:'URL Button',     color:'#FBBF24', Icon:IcLink},
+  {value:'lead_capture',  label:'Lead Capture',   color:P,         Icon:IcMail},
+  {value:'delay',         label:'Delay / Wait',   color:'#64748b', Icon:IcClock},
 ];
 
 const TEMPLATES = [
@@ -24,8 +24,8 @@ const TEMPLATES = [
   { name:'Lead Capture Flow',
     steps:[
       {id:'s1',type:'text',        text:"Hey! I have something special for you",delay_ms:0},
-      {id:'s2',type:'lead_capture',text:'Drop your email and I will send it over!',field:'email',next_step:'s3',skip_step:'s3'},
-      {id:'s3',type:'url_button',  text:'Here you go!',button_label:'Access Now',url:'https://yourlink.com'},
+      {id:'s2',type:'lead_capture',text:"Drop your email and I'll send it over!",field:'email',next_step:'s3',skip_step:'s3'},
+      {id:'s3',type:'url_button',  text:"Here you go!",button_label:'Access Now',url:'https://yourlink.com'},
     ]},
   { name:'Simple DM Reply',
     steps:[
@@ -41,7 +41,7 @@ const LEAD_FIELDS = [{value:'email',label:'Email'},{value:'phone',label:'Phone'}
 export default function Flows() {
   const [flows,    setFlows]    = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [modal,    setModal]    = useState(null);
+  const [modal,    setModal]    = useState(null); // null | 'templates' | 'builder'
   const [flow,     setFlow]     = useState(BLANK_FLOW);
   const [selStep,  setSelStep]  = useState(null);
   const [saving,   setSaving]   = useState(false);
@@ -54,7 +54,7 @@ export default function Flows() {
   useEffect(()=>{ load(); },[]);
 
   const openNew = (tpl=null) => {
-    setFlow({...BLANK_FLOW, account_id:accounts[0]?._id?.$oid||'', ...(tpl?{name:tpl.name,steps:tpl.steps}:{})});
+    setFlow({...BLANK_FLOW, account_id:accounts[0]?._id?.$oid||'', ...(tpl?{name:tpl.name,steps:JSON.parse(JSON.stringify(tpl.steps))}:{})});
     setSelStep(null); setErr(''); setModal('builder');
   };
 
@@ -75,8 +75,7 @@ export default function Flows() {
   const updStep = (idx, patch) => setFlow(f=>({...f,steps:f.steps.map((s,i)=>i===idx?{...s,...patch}:s)}));
   const delStep = idx => { setFlow(f=>({...f,steps:f.steps.filter((_,i)=>i!==idx)})); setSelStep(null); };
   const moveStep = (idx, dir) => {
-    const steps = [...flow.steps];
-    const t = idx+dir;
+    const steps=[...flow.steps]; const t=idx+dir;
     if(t<0||t>=steps.length) return;
     [steps[idx],steps[t]]=[steps[t],steps[idx]];
     setFlow(f=>({...f,steps})); setSelStep(t);
@@ -102,7 +101,7 @@ export default function Flows() {
   };
 
   const accountOpts = [{value:'',label:'Select account'}, ...accounts.map(a=>({value:a._id?.$oid||'',label:`@${a.username}`}))];
-  const stepIds = flow.steps.map(s=>({value:s.id,label:`${s.type} — ${s.text?.slice(0,20)||'(no text)'}`}));
+  const stepIds = flow.steps.map(s=>({value:s.id,label:`${s.type} — ${s.text?.slice(0,18)||'(empty)'}`}));
   const typeInfo = t => STEP_TYPES.find(x=>x.value===t)||{color:'#64748b',Icon:IcTrigger};
   const cur = selStep!==null ? flow.steps[selStep] : null;
 
@@ -113,18 +112,18 @@ export default function Flows() {
         subtitle="Flow Builder"
         right={<Btn small onClick={()=>setModal('templates')} icon={<IcPlus size={13} color="#000"/>}>New</Btn>}
       />
-      <div style={{padding:'0 16px'}}>
+      <div style={{padding:'0 14px'}}>
         {flows.length===0
           ? <EmptyState Icon={IcFlow} text="No flows yet — create one to define your DM conversations"/>
           : flows.map((f,i)=>(
-            <Card key={f._id?.$oid||i} style={{marginBottom:10, padding:'15px'}}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:7}}>
+            <Card key={f._id?.$oid||i} style={{marginBottom:10, padding:'14px'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6}}>
                 <div style={{fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:15, color:'#fff', flex:1, paddingRight:8}}>
                   {f.name}
                 </div>
                 <Badge label={f.active?'Active':'Paused'} color={f.active?G:P}/>
               </div>
-              <div style={{fontSize:12, color:'rgba(255,255,255,0.38)', marginBottom:11}}>
+              <div style={{fontSize:12, color:'rgba(255,255,255,0.35)', marginBottom:10}}>
                 {Array.isArray(f.steps)?f.steps.length:0} steps
                 {f.description ? ' · '+f.description : ''}
               </div>
@@ -139,147 +138,121 @@ export default function Flows() {
         }
       </div>
 
-      {/* Templates picker */}
+      {/* Templates — full screen modal */}
       {modal==='templates' && (
         <Modal title="New Flow" onClose={()=>setModal(null)}>
-          <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:14}}>Choose a template or start blank</div>
+          <div style={{fontSize:13, color:'rgba(255,255,255,0.4)', marginBottom:16}}>
+            Start with a template or build from scratch
+          </div>
           {TEMPLATES.map((t,i)=>(
             <button key={i} onClick={()=>openNew(t)} style={{
               display:'block', width:'100%', textAlign:'left',
               background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)',
-              borderRadius:15, padding:'14px 15px', marginBottom:8, cursor:'pointer',
+              borderRadius:15, padding:'15px', marginBottom:10, cursor:'pointer',
             }}>
-              <div style={{fontWeight:700, fontSize:14, color:'#fff', marginBottom:3}}>{t.name}</div>
-              <div style={{fontSize:11, color:'rgba(255,255,255,0.38)'}}>{t.steps.length} steps</div>
+              <div style={{fontWeight:700, fontSize:15, color:'#fff', marginBottom:4}}>{t.name}</div>
+              <div style={{fontSize:12, color:'rgba(255,255,255,0.38)'}}>{t.steps.length} steps pre-configured</div>
             </button>
           ))}
           <button onClick={()=>openNew()} style={{
             display:'block', width:'100%', textAlign:'left',
             background:'transparent', border:'1px dashed rgba(255,255,255,0.14)',
-            borderRadius:15, padding:'14px 15px', cursor:'pointer',
-            color:'rgba(255,255,255,0.38)', fontSize:14,
-          }}>Start from scratch</button>
+            borderRadius:15, padding:'15px', cursor:'pointer',
+            color:'rgba(255,255,255,0.4)', fontSize:14,
+          }}>Start from scratch →</button>
         </Modal>
       )}
 
-      {/* Full-screen flow builder */}
+      {/* Flow Builder — full screen via FullScreen component */}
       {modal==='builder' && (
-        <div style={{
-          position:'fixed', inset:0, background:'#07070F',
-          zIndex:150, display:'flex', flexDirection:'column', overflow:'hidden',
-        }}>
-          {/* Builder header */}
-          <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'0 16px', height:52,
-            background:'rgba(255,255,255,0.04)',
-            borderBottom:'1px solid rgba(255,255,255,0.07)',
-            flexShrink:0,
-          }}>
-            <button onClick={()=>setModal(null)} style={{
-              background:'none', border:'none', color:'rgba(255,255,255,0.45)',
-              fontSize:20, cursor:'pointer', lineHeight:1, padding:'0 4px',
-            }}>←</button>
-            <div style={{fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:16, color:'#fff'}}>
-              Flow Builder
-            </div>
-            <Btn small onClick={save} disabled={saving}>{saving?'...':'Save'}</Btn>
-          </div>
-
-          {/* Scrollable content */}
-          <div style={{flex:1, overflowY:'auto', padding:'16px', WebkitOverflowScrolling:'touch'}}>
-            <Input label="FLOW NAME" value={flow.name} onChange={v=>setFlow(f=>({...f,name:v}))} placeholder="My Awesome Flow"/>
+        <FullScreen
+          title="Flow Builder"
+          onBack={()=>setModal(null)}
+          topRight={<Btn small onClick={save} disabled={saving}>{saving?'Saving...':'Save'}</Btn>}
+        >
+          <div style={{padding:'16px 16px 48px'}}>
+            <Input label="FLOW NAME" value={flow.name} onChange={v=>setFlow(f=>({...f,name:v}))} placeholder="e.g. Free Guide Flow"/>
             <RSelect label="ACCOUNT" value={flow.account_id} onChange={v=>setFlow(f=>({...f,account_id:v}))} options={accountOpts}/>
 
-            {err && <div style={{color:P, fontSize:12, marginBottom:12, padding:'9px 12px', background:`${P}10`, borderRadius:10}}>{err}</div>}
+            {err && (
+              <div style={{color:P, fontSize:12, marginBottom:12, padding:'9px 12px', background:`${P}10`, borderRadius:10}}>{err}</div>
+            )}
 
-            {/* Steps */}
-            <div style={{color:'rgba(255,255,255,0.38)', fontSize:10, fontWeight:600, letterSpacing:2, marginBottom:10}}>
-              STEPS ({flow.steps.length})
-            </div>
+            <SectionLabel>STEPS ({flow.steps.length})</SectionLabel>
+
+            {flow.steps.length===0 && (
+              <div style={{textAlign:'center', padding:'20px', color:'rgba(255,255,255,0.2)', fontSize:13, marginBottom:12}}>
+                Add steps below to build your flow
+              </div>
+            )}
 
             {flow.steps.map((s,i)=>{
               const info = typeInfo(s.type);
-              const isSelected = selStep===i;
+              const isSel = selStep===i;
               return (
                 <div key={s.id}>
-                  <button onClick={()=>setSelStep(isSelected?null:i)} style={{
+                  <button onClick={()=>setSelStep(isSel?null:i)} style={{
                     width:'100%', textAlign:'left',
-                    background: isSelected ? `${info.color}12` : 'rgba(255,255,255,0.04)',
-                    border:`1px solid ${isSelected?info.color+'40':'rgba(255,255,255,0.08)'}`,
-                    borderRadius:14, padding:'11px 13px', marginBottom:6, cursor:'pointer',
+                    background: isSel ? `${info.color}10` : 'rgba(255,255,255,0.04)',
+                    border:`1px solid ${isSel?info.color+'38':'rgba(255,255,255,0.08)'}`,
+                    borderRadius:13, padding:'11px 13px', marginBottom:6, cursor:'pointer',
                   }}>
                     <div style={{display:'flex', alignItems:'center', gap:10}}>
-                      <info.Icon size={16} color={info.color}/>
+                      <info.Icon size={15} color={info.color}/>
                       <div style={{flex:1, minWidth:0}}>
-                        <div style={{fontSize:11, color:info.color, fontWeight:700, marginBottom:2, letterSpacing:0.5}}>
+                        <div style={{fontSize:11, color:info.color, fontWeight:700, marginBottom:1, letterSpacing:0.4}}>
                           {s.type.replace(/_/g,' ').toUpperCase()}
                         </div>
-                        <div style={{fontSize:12, color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                        <div style={{fontSize:12, color:'rgba(255,255,255,0.42)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                           {s.text||'(no text yet)'}
                         </div>
                       </div>
-                      <span style={{color:'rgba(255,255,255,0.25)', fontSize:12}}>
-                        {isSelected?'▲':'▼'}
-                      </span>
+                      <span style={{color:'rgba(255,255,255,0.22)', fontSize:11}}>{isSel?'▲':'▼'}</span>
                     </div>
                   </button>
 
-                  {isSelected && (
+                  {isSel && (
                     <div style={{
-                      background:`${info.color}08`,
-                      border:`1px solid ${info.color}2a`,
-                      borderRadius:14, padding:'14px', marginBottom:10, marginTop:-2,
+                      background:`${info.color}07`, border:`1px solid ${info.color}28`,
+                      borderRadius:13, padding:'13px', marginBottom:10, marginTop:-2,
                     }}>
-                      {/* Move up/down/delete */}
-                      <div style={{display:'flex', gap:6, marginBottom:12}}>
+                      <div style={{display:'flex', gap:6, marginBottom:11}}>
                         <Btn small variant="ghost" onClick={()=>moveStep(i,-1)} icon={<IcArrowUp size={12} color="rgba(255,255,255,0.5)"/>}/>
                         <Btn small variant="ghost" onClick={()=>moveStep(i,1)} icon={<IcArrowDown size={12} color="rgba(255,255,255,0.5)"/>}/>
                         <Btn small variant="danger" onClick={()=>delStep(i)} icon={<IcTrash size={12} color={P}/>}>Remove</Btn>
                       </div>
-
                       {s.type!=='delay' && (
-                        <Textarea
-                          label="MESSAGE TEXT"
-                          value={s.text}
-                          onChange={v=>updStep(i,{text:v})}
-                          placeholder="Use {{username}}, {{comment}}, {{keyword}}"
-                          rows={3}
-                        />
+                        <Textarea label="MESSAGE TEXT" value={s.text} onChange={v=>updStep(i,{text:v})}
+                          placeholder="Use {{username}}, {{comment}}, {{keyword}}" rows={3}/>
                       )}
                       {s.type==='url_button' && (<>
                         <Input label="BUTTON LABEL" value={s.button_label} onChange={v=>updStep(i,{button_label:v})} placeholder="Get Your Guide"/>
-                        <Input label="DESTINATION URL" value={s.url} onChange={v=>updStep(i,{url:v})} placeholder="https://" mono/>
+                        <Input label="DESTINATION URL" value={s.url} onChange={v=>updStep(i,{url:v})} placeholder="https://yourguide.com" mono/>
                       </>)}
                       {s.type==='follow_gate' && (
-                        <RSelect label="NEXT STEP (after follow verified)"
-                          value={s.next_step||''}
+                        <RSelect label="NEXT STEP (after follow verified)" value={s.next_step||''}
                           onChange={v=>updStep(i,{next_step:v})}
-                          options={[{value:'',label:'End flow'},...stepIds.filter(x=>x.value!==s.id)]}
-                        />
+                          options={[{value:'',label:'End flow'},...stepIds.filter(x=>x.value!==s.id)]}/>
                       )}
                       {s.type==='lead_capture' && (<>
                         <RSelect label="CAPTURE FIELD" value={s.field||'email'} onChange={v=>updStep(i,{field:v})} options={LEAD_FIELDS}/>
-                        <RSelect label="NEXT STEP" value={s.next_step||''} onChange={v=>updStep(i,{next_step:v})} options={[{value:'',label:'End flow'},...stepIds.filter(x=>x.value!==s.id)]}/>
+                        <RSelect label="NEXT STEP" value={s.next_step||''} onChange={v=>updStep(i,{next_step:v})}
+                          options={[{value:'',label:'End flow'},...stepIds.filter(x=>x.value!==s.id)]}/>
                       </>)}
                       {s.type==='delay' && (
-                        <Input label="WAIT DURATION (ms)" value={s.ms||2000} onChange={v=>updStep(i,{ms:parseInt(v)||2000})} placeholder="2000" mono/>
+                        <Input label="WAIT (milliseconds)" value={s.ms||2000} onChange={v=>updStep(i,{ms:parseInt(v)||2000})} placeholder="2000" mono/>
                       )}
-                      <Input label="DELAY BEFORE THIS STEP (ms)" value={s.delay_ms||0} onChange={v=>updStep(i,{delay_ms:parseInt(v)||0})} placeholder="0" mono/>
                     </div>
                   )}
                 </div>
               );
             })}
 
-            {/* Add step */}
-            <div style={{color:'rgba(255,255,255,0.38)', fontSize:10, fontWeight:600, letterSpacing:2, marginBottom:10, marginTop:8}}>
-              ADD STEP
-            </div>
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingBottom:24}}>
+            <SectionLabel>ADD STEP</SectionLabel>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingBottom:16}}>
               {STEP_TYPES.map(t=>(
                 <button key={t.value} onClick={()=>addStep(t.value)} style={{
-                  background:`${t.color}10`, border:`1px solid ${t.color}28`,
+                  background:`${t.color}0e`, border:`1px solid ${t.color}25`,
                   borderRadius:13, padding:'12px 8px', cursor:'pointer',
                   display:'flex', flexDirection:'column', alignItems:'center', gap:6,
                 }}>
@@ -289,7 +262,7 @@ export default function Flows() {
               ))}
             </div>
           </div>
-        </div>
+        </FullScreen>
       )}
     </div>
   );
