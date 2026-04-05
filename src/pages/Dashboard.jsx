@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, StatCard, PageTitle, Badge, EmptyState, colors } from '../components/Layout.jsx';
+import { IcTrigger, IcFlow, IcLeads, IcAccount, IcCheck, IcAnalytics } from '../components/Icons.jsx';
 import { api } from '../lib/api.js';
 const {G,P,V} = colors;
 
@@ -40,12 +41,12 @@ export default function Dashboard() {
 
       {/* Stats grid */}
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, padding:'0 16px 16px'}}>
-        <StatCard label="Triggers Fired"  value={stats?.triggersTotal}  color={G}          icon="◎" />
-        <StatCard label="DMs Sent"        value={stats?.dmsSent}        color={V}          icon="💬" />
-        <StatCard label="Leads Captured"  value={stats?.leadsTotal}     color="#FBBF24"    icon="◉" />
-        <StatCard label="Follow Verified" value={stats?.followVerified} color={G}          icon="✓" />
-        <StatCard label="Sessions"        value={stats?.sessions}       color={P}          icon="⬡" />
-        <StatCard label="Accounts"        value={accounts.length}       color={V}          icon="@" />
+        <StatCard label="Triggers Fired"  value={stats?.triggersTotal}  color={G}          Icon={IcTrigger} />
+        <StatCard label="DMs Sent"        value={stats?.dmsSent}        color={V}          Icon={IcFlow} />
+        <StatCard label="Leads Captured"  value={stats?.leadsTotal}     color="#FBBF24"    Icon={IcLeads} />
+        <StatCard label="Follow Verified" value={stats?.followVerified} color={G}          Icon={IcCheck} />
+        <StatCard label="Sessions"        value={stats?.sessions}       color={P}          Icon={IcAnalytics} />
+        <StatCard label="Accounts"        value={accounts.length}       color={V}          Icon={IcAccount} />
       </div>
 
       {/* Connected Accounts */}

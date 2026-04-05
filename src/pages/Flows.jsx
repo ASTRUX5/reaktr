@@ -1,44 +1,42 @@
 import { useState, useEffect } from 'react';
-import { Card, Btn, PageTitle, Badge, EmptyState, Modal, Input, RSelect, colors } from '../components/Layout.jsx';
+import { Card, Btn, PageTitle, Badge, EmptyState, Modal, Input, RSelect, Textarea, colors } from '../components/Layout.jsx';
+import { IcFlow, IcPlus, IcTrash, IcPause, IcPlay, IcArrowUp, IcArrowDown, IcLink, IcMail, IcTrigger, IcClock, IcCheck, IcKey } from '../components/Icons.jsx';
 import { api } from '../lib/api.js';
 const {G,P,V} = colors;
 
 const STEP_TYPES = [
-  {value:'text',          label:'Text Message',    color:'#60A5FA', icon:'💬'},
-  {value:'buttons',       label:'Buttons',          color:V,         icon:'🔘'},
-  {value:'quick_replies', label:'Quick Replies',    color:G,         icon:'⚡'},
-  {value:'follow_gate',   label:'Follow Gate',      color:G,         icon:'🔐'},
-  {value:'url_button',    label:'URL Button',       color:'#FBBF24', icon:'🔗'},
-  {value:'lead_capture',  label:'Lead Capture',     color:P,         icon:'📧'},
-  {value:'delay',         label:'Delay',            color:'#64748b', icon:'⏱'},
+  {value:'text',          label:'Text Message',    color:'#60A5FA', Icon:IcTrigger},
+  {value:'buttons',       label:'Button Template', color:V,         Icon:IcKey},
+  {value:'quick_replies', label:'Quick Replies',   color:G,         Icon:IcCheck},
+  {value:'follow_gate',   label:'Follow Gate',     color:G,         Icon:IcCheck},
+  {value:'url_button',    label:'URL Button',      color:'#FBBF24', Icon:IcLink},
+  {value:'lead_capture',  label:'Lead Capture',    color:P,         Icon:IcMail},
+  {value:'delay',         label:'Delay / Wait',    color:'#64748b', Icon:IcClock},
 ];
 
 const TEMPLATES = [
-  { name:'🎁 Free Guide (Follow Gate)',
+  { name:'Free Guide (Follow Gate)',
     steps:[
-      {id:'s1',type:'text',       text:'Hey! Thanks for stopping by 👋',delay_ms:0},
-      {id:'s2',type:'follow_gate',text:'Follow us to unlock your free guide! 👇',next_step:'s3'},
-      {id:'s3',type:'url_button', text:"You're verified! Here's your free guide 🎉",button_label:'📖 Get Free Guide',url:'https://yourguide.com'},
+      {id:'s1',type:'text',       text:'Hey! Thanks for stopping by',delay_ms:0},
+      {id:'s2',type:'follow_gate',text:'Follow us to unlock your free guide!',next_step:'s3'},
+      {id:'s3',type:'url_button', text:"You're verified! Here's your free guide",button_label:'Get Free Guide',url:'https://yourguide.com'},
     ]},
-  { name:'📧 Lead Capture Flow',
+  { name:'Lead Capture Flow',
     steps:[
-      {id:'s1',type:'text',        text:"Hey! I've got something special for you 🎁",delay_ms:0},
-      {id:'s2',type:'lead_capture',text:'Drop your email and I\'ll send it over! 📩',field:'email',next_step:'s3',skip_step:'s3'},
-      {id:'s3',type:'url_button',  text:'Here you go!',button_label:'🚀 Access Now',url:'https://yourlink.com'},
+      {id:'s1',type:'text',        text:"Hey! I have something special for you",delay_ms:0},
+      {id:'s2',type:'lead_capture',text:'Drop your email and I will send it over!',field:'email',next_step:'s3',skip_step:'s3'},
+      {id:'s3',type:'url_button',  text:'Here you go!',button_label:'Access Now',url:'https://yourlink.com'},
     ]},
-  { name:'✅ Simple DM Reply',
+  { name:'Simple DM Reply',
     steps:[
-      {id:'s1',type:'text',      text:'Thanks for commenting! 👇',delay_ms:0},
-      {id:'s2',type:'url_button',text:"Here's the link!",button_label:'👉 Open Link',url:'https://yourlink.com'},
+      {id:'s1',type:'text',      text:'Thanks for commenting!',delay_ms:0},
+      {id:'s2',type:'url_button',text:"Here's the link!",button_label:'Open Link',url:'https://yourlink.com'},
     ]},
 ];
 
 const BLANK_FLOW = {name:'',account_id:'',description:'',steps:[],active:true};
 const genId = () => 's'+Math.random().toString(36).slice(2,7);
-
-const MATCH_OPTS = [
-  {value:'email',label:'Email'},{value:'phone',label:'Phone'},{value:'name',label:'Name'},
-];
+const LEAD_FIELDS = [{value:'email',label:'Email'},{value:'phone',label:'Phone'},{value:'name',label:'Name'}];
 
 export default function Flows() {
   const [flows,    setFlows]    = useState([]);
@@ -56,11 +54,7 @@ export default function Flows() {
   useEffect(()=>{ load(); },[]);
 
   const openNew = (tpl=null) => {
-    setFlow({
-      ...BLANK_FLOW,
-      account_id: accounts[0]?._id?.$oid||'',
-      ...(tpl?{name:tpl.name,steps:tpl.steps}:{}),
-    });
+    setFlow({...BLANK_FLOW, account_id:accounts[0]?._id?.$oid||'', ...(tpl?{name:tpl.name,steps:tpl.steps}:{})});
     setSelStep(null); setErr(''); setModal('builder');
   };
 
@@ -80,11 +74,18 @@ export default function Flows() {
 
   const updStep = (idx, patch) => setFlow(f=>({...f,steps:f.steps.map((s,i)=>i===idx?{...s,...patch}:s)}));
   const delStep = idx => { setFlow(f=>({...f,steps:f.steps.filter((_,i)=>i!==idx)})); setSelStep(null); };
+  const moveStep = (idx, dir) => {
+    const steps = [...flow.steps];
+    const t = idx+dir;
+    if(t<0||t>=steps.length) return;
+    [steps[idx],steps[t]]=[steps[t],steps[idx]];
+    setFlow(f=>({...f,steps})); setSelStep(t);
+  };
 
   const save = async () => {
-    if(!flow.name)          return setErr('Flow name required');
-    if(!flow.account_id)    return setErr('Select account');
-    if(!flow.steps.length)  return setErr('Add at least one step');
+    if(!flow.name)         return setErr('Flow name required');
+    if(!flow.account_id)   return setErr('Select an account');
+    if(!flow.steps.length) return setErr('Add at least one step');
     setSaving(true);
     try { await api.createFlow(flow); setModal(null); load(); }
     catch(e) { setErr(e.message); }
@@ -101,37 +102,37 @@ export default function Flows() {
   };
 
   const accountOpts = [{value:'',label:'Select account'}, ...accounts.map(a=>({value:a._id?.$oid||'',label:`@${a.username}`}))];
-  const stepIds = flow.steps.map(s=>({value:s.id, label:`${s.type} — ${s.text?.slice(0,18)||'(no text)'}`}));
-  const typeInfo = t => STEP_TYPES.find(x=>x.value===t)||{color:'#64748b',icon:'?'};
+  const stepIds = flow.steps.map(s=>({value:s.id,label:`${s.type} — ${s.text?.slice(0,20)||'(no text)'}`}));
+  const typeInfo = t => STEP_TYPES.find(x=>x.value===t)||{color:'#64748b',Icon:IcTrigger};
   const cur = selStep!==null ? flow.steps[selStep] : null;
 
   return (
     <div className="fade-up">
       <PageTitle
         title="Flows"
-        subtitle="FLOW BUILDER"
-        right={<Btn small onClick={()=>setModal('templates')}>+ New</Btn>}
+        subtitle="Flow Builder"
+        right={<Btn small onClick={()=>setModal('templates')} icon={<IcPlus size={13} color="#000"/>}>New</Btn>}
       />
       <div style={{padding:'0 16px'}}>
         {flows.length===0
-          ? <EmptyState icon="⟁" text="No flows yet. Create one to define your DM conversations."/>
+          ? <EmptyState Icon={IcFlow} text="No flows yet — create one to define your DM conversations"/>
           : flows.map((f,i)=>(
-            <Card key={f._id?.$oid||i} style={{marginBottom:10, padding:'16px'}}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8}}>
-                <div style={{fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:15, color:'#fff', flex:1, minWidth:0, paddingRight:8}}>
+            <Card key={f._id?.$oid||i} style={{marginBottom:10, padding:'15px'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:7}}>
+                <div style={{fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:15, color:'#fff', flex:1, paddingRight:8}}>
                   {f.name}
                 </div>
-                <Badge label={f.active?'ACTIVE':'PAUSED'} color={f.active?G:P}/>
+                <Badge label={f.active?'Active':'Paused'} color={f.active?G:P}/>
               </div>
-              <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:12}}>
+              <div style={{fontSize:12, color:'rgba(255,255,255,0.38)', marginBottom:11}}>
                 {Array.isArray(f.steps)?f.steps.length:0} steps
                 {f.description ? ' · '+f.description : ''}
               </div>
               <div style={{display:'flex', gap:8}}>
-                <Btn small variant={f.active?'ghost':'primary'} onClick={()=>toggle(f)}>
-                  {f.active?'Pause':'Resume'}
-                </Btn>
-                <Btn small variant="danger" onClick={()=>remove(f)}>Delete</Btn>
+                <Btn small variant={f.active?'ghost':'primary'}
+                  icon={f.active?<IcPause size={12} color="rgba(255,255,255,0.6)"/>:<IcPlay size={12} color="#000"/>}
+                  onClick={()=>toggle(f)}>{f.active?'Pause':'Resume'}</Btn>
+                <Btn small variant="danger" icon={<IcTrash size={12} color={P}/>} onClick={()=>remove(f)}>Delete</Btn>
               </div>
             </Card>
           ))
@@ -145,19 +146,19 @@ export default function Flows() {
           {TEMPLATES.map((t,i)=>(
             <button key={i} onClick={()=>openNew(t)} style={{
               display:'block', width:'100%', textAlign:'left',
-              background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.10)',
-              borderRadius:16, padding:'14px 16px', marginBottom:8, cursor:'pointer',
+              background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)',
+              borderRadius:15, padding:'14px 15px', marginBottom:8, cursor:'pointer',
             }}>
-              <div style={{fontWeight:700, fontSize:14, color:'#fff', marginBottom:4}}>{t.name}</div>
-              <div style={{fontSize:11, color:'rgba(255,255,255,0.4)'}}>{t.steps.length} steps</div>
+              <div style={{fontWeight:700, fontSize:14, color:'#fff', marginBottom:3}}>{t.name}</div>
+              <div style={{fontSize:11, color:'rgba(255,255,255,0.38)'}}>{t.steps.length} steps</div>
             </button>
           ))}
           <button onClick={()=>openNew()} style={{
             display:'block', width:'100%', textAlign:'left',
-            background:'transparent', border:'1px dashed rgba(255,255,255,0.15)',
-            borderRadius:16, padding:'14px 16px', cursor:'pointer',
-            color:'rgba(255,255,255,0.4)', fontSize:14,
-          }}>⬡ Start from scratch</button>
+            background:'transparent', border:'1px dashed rgba(255,255,255,0.14)',
+            borderRadius:15, padding:'14px 15px', cursor:'pointer',
+            color:'rgba(255,255,255,0.38)', fontSize:14,
+          }}>Start from scratch</button>
         </Modal>
       )}
 
@@ -165,18 +166,19 @@ export default function Flows() {
       {modal==='builder' && (
         <div style={{
           position:'fixed', inset:0, background:'#07070F',
-          zIndex:100, display:'flex', flexDirection:'column', overflow:'hidden',
+          zIndex:150, display:'flex', flexDirection:'column', overflow:'hidden',
         }}>
-          {/* Builder top bar */}
+          {/* Builder header */}
           <div style={{
             display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'12px 16px',
-            background:'rgba(255,255,255,0.05)',
-            borderBottom:'1px solid rgba(255,255,255,0.08)',
+            padding:'0 16px', height:52,
+            background:'rgba(255,255,255,0.04)',
+            borderBottom:'1px solid rgba(255,255,255,0.07)',
+            flexShrink:0,
           }}>
             <button onClick={()=>setModal(null)} style={{
-              background:'none', border:'none', color:'rgba(255,255,255,0.5)',
-              fontSize:22, cursor:'pointer', lineHeight:1,
+              background:'none', border:'none', color:'rgba(255,255,255,0.45)',
+              fontSize:20, cursor:'pointer', lineHeight:1, padding:'0 4px',
             }}>←</button>
             <div style={{fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:16, color:'#fff'}}>
               Flow Builder
@@ -184,15 +186,15 @@ export default function Flows() {
             <Btn small onClick={save} disabled={saving}>{saving?'...':'Save'}</Btn>
           </div>
 
-          <div style={{flex:1, overflowY:'auto', padding:'16px'}}>
-            {/* Flow meta */}
+          {/* Scrollable content */}
+          <div style={{flex:1, overflowY:'auto', padding:'16px', WebkitOverflowScrolling:'touch'}}>
             <Input label="FLOW NAME" value={flow.name} onChange={v=>setFlow(f=>({...f,name:v}))} placeholder="My Awesome Flow"/>
             <RSelect label="ACCOUNT" value={flow.account_id} onChange={v=>setFlow(f=>({...f,account_id:v}))} options={accountOpts}/>
 
-            {err && <div style={{color:P, fontSize:12, marginBottom:12}}>{err}</div>}
+            {err && <div style={{color:P, fontSize:12, marginBottom:12, padding:'9px 12px', background:`${P}10`, borderRadius:10}}>{err}</div>}
 
-            {/* Steps list */}
-            <div style={{color:'rgba(255,255,255,0.4)', fontSize:10, fontWeight:600, letterSpacing:2, marginBottom:10}}>
+            {/* Steps */}
+            <div style={{color:'rgba(255,255,255,0.38)', fontSize:10, fontWeight:600, letterSpacing:2, marginBottom:10}}>
               STEPS ({flow.steps.length})
             </div>
 
@@ -203,74 +205,67 @@ export default function Flows() {
                 <div key={s.id}>
                   <button onClick={()=>setSelStep(isSelected?null:i)} style={{
                     width:'100%', textAlign:'left',
-                    background: isSelected ? `${info.color}15` : 'rgba(255,255,255,0.05)',
-                    border:`1px solid ${isSelected ? info.color+'44' : 'rgba(255,255,255,0.08)'}`,
-                    borderRadius:16, padding:'12px 14px', marginBottom:8, cursor:'pointer',
+                    background: isSelected ? `${info.color}12` : 'rgba(255,255,255,0.04)',
+                    border:`1px solid ${isSelected?info.color+'40':'rgba(255,255,255,0.08)'}`,
+                    borderRadius:14, padding:'11px 13px', marginBottom:6, cursor:'pointer',
                   }}>
                     <div style={{display:'flex', alignItems:'center', gap:10}}>
-                      <span style={{fontSize:18}}>{info.icon}</span>
+                      <info.Icon size={16} color={info.color}/>
                       <div style={{flex:1, minWidth:0}}>
-                        <div style={{fontSize:12, color:info.color, fontWeight:700, marginBottom:2}}>
+                        <div style={{fontSize:11, color:info.color, fontWeight:700, marginBottom:2, letterSpacing:0.5}}>
                           {s.type.replace(/_/g,' ').toUpperCase()}
                         </div>
-                        <div style={{fontSize:12, color:'rgba(255,255,255,0.5)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                        <div style={{fontSize:12, color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                           {s.text||'(no text yet)'}
                         </div>
                       </div>
-                      <span style={{color:'rgba(255,255,255,0.3)', fontSize:14}}>{isSelected?'▲':'▼'}</span>
+                      <span style={{color:'rgba(255,255,255,0.25)', fontSize:12}}>
+                        {isSelected?'▲':'▼'}
+                      </span>
                     </div>
                   </button>
 
-                  {/* Inline step editor */}
                   {isSelected && (
                     <div style={{
-                      background:'rgba(255,255,255,0.04)',
-                      border:`1px solid ${info.color}33`,
-                      borderRadius:16, padding:'16px', marginBottom:12, marginTop:-4,
+                      background:`${info.color}08`,
+                      border:`1px solid ${info.color}2a`,
+                      borderRadius:14, padding:'14px', marginBottom:10, marginTop:-2,
                     }}>
+                      {/* Move up/down/delete */}
+                      <div style={{display:'flex', gap:6, marginBottom:12}}>
+                        <Btn small variant="ghost" onClick={()=>moveStep(i,-1)} icon={<IcArrowUp size={12} color="rgba(255,255,255,0.5)"/>}/>
+                        <Btn small variant="ghost" onClick={()=>moveStep(i,1)} icon={<IcArrowDown size={12} color="rgba(255,255,255,0.5)"/>}/>
+                        <Btn small variant="danger" onClick={()=>delStep(i)} icon={<IcTrash size={12} color={P}/>}>Remove</Btn>
+                      </div>
+
                       {s.type!=='delay' && (
-                        <div style={{marginBottom:12}}>
-                          <div style={{color:'rgba(255,255,255,0.4)', fontSize:10, fontWeight:600, letterSpacing:1, marginBottom:6}}>MESSAGE TEXT</div>
-                          <textarea
-                            value={s.text||''}
-                            onChange={e=>updStep(i,{text:e.target.value})}
-                            placeholder="Use {{username}}, {{comment}}, {{keyword}}"
-                            rows={3}
-                            style={{
-                              width:'100%', background:'rgba(255,255,255,0.07)',
-                              border:'1px solid rgba(255,255,255,0.12)',
-                              borderRadius:12, color:'#fff', padding:'10px 14px',
-                              fontSize:13, outline:'none', resize:'none',
-                              fontFamily:'DM Sans, sans-serif',
-                            }}
-                          />
-                        </div>
+                        <Textarea
+                          label="MESSAGE TEXT"
+                          value={s.text}
+                          onChange={v=>updStep(i,{text:v})}
+                          placeholder="Use {{username}}, {{comment}}, {{keyword}}"
+                          rows={3}
+                        />
                       )}
                       {s.type==='url_button' && (<>
-                        <Input label="BUTTON LABEL" value={s.button_label} onChange={v=>updStep(i,{button_label:v})} placeholder="Get Your Guide →"/>
-                        <Input label="URL" value={s.url} onChange={v=>updStep(i,{url:v})} placeholder="https://" mono/>
+                        <Input label="BUTTON LABEL" value={s.button_label} onChange={v=>updStep(i,{button_label:v})} placeholder="Get Your Guide"/>
+                        <Input label="DESTINATION URL" value={s.url} onChange={v=>updStep(i,{url:v})} placeholder="https://" mono/>
                       </>)}
                       {s.type==='follow_gate' && (
                         <RSelect label="NEXT STEP (after follow verified)"
                           value={s.next_step||''}
                           onChange={v=>updStep(i,{next_step:v})}
-                          options={[{value:'',label:'— End flow —'},...stepIds.filter(x=>x.value!==s.id)]}
+                          options={[{value:'',label:'End flow'},...stepIds.filter(x=>x.value!==s.id)]}
                         />
                       )}
                       {s.type==='lead_capture' && (<>
-                        <RSelect label="CAPTURE FIELD" value={s.field||'email'} onChange={v=>updStep(i,{field:v})} options={MATCH_OPTS}/>
-                        <RSelect label="NEXT STEP"
-                          value={s.next_step||''}
-                          onChange={v=>updStep(i,{next_step:v})}
-                          options={[{value:'',label:'— End flow —'},...stepIds.filter(x=>x.value!==s.id)]}
-                        />
+                        <RSelect label="CAPTURE FIELD" value={s.field||'email'} onChange={v=>updStep(i,{field:v})} options={LEAD_FIELDS}/>
+                        <RSelect label="NEXT STEP" value={s.next_step||''} onChange={v=>updStep(i,{next_step:v})} options={[{value:'',label:'End flow'},...stepIds.filter(x=>x.value!==s.id)]}/>
                       </>)}
                       {s.type==='delay' && (
-                        <Input label="DELAY (ms)" value={s.ms||2000} onChange={v=>updStep(i,{ms:parseInt(v)||2000})} placeholder="2000" mono/>
+                        <Input label="WAIT DURATION (ms)" value={s.ms||2000} onChange={v=>updStep(i,{ms:parseInt(v)||2000})} placeholder="2000" mono/>
                       )}
-                      <div style={{marginTop:8}}>
-                        <Btn small variant="danger" onClick={()=>delStep(i)}>Delete Step</Btn>
-                      </div>
+                      <Input label="DELAY BEFORE THIS STEP (ms)" value={s.delay_ms||0} onChange={v=>updStep(i,{delay_ms:parseInt(v)||0})} placeholder="0" mono/>
                     </div>
                   )}
                 </div>
@@ -278,19 +273,18 @@ export default function Flows() {
             })}
 
             {/* Add step */}
-            <div style={{color:'rgba(255,255,255,0.4)', fontSize:10, fontWeight:600, letterSpacing:2, marginBottom:10, marginTop:8}}>
+            <div style={{color:'rgba(255,255,255,0.38)', fontSize:10, fontWeight:600, letterSpacing:2, marginBottom:10, marginTop:8}}>
               ADD STEP
             </div>
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:24}}>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingBottom:24}}>
               {STEP_TYPES.map(t=>(
                 <button key={t.value} onClick={()=>addStep(t.value)} style={{
-                  background:`${t.color}12`, border:`1px solid ${t.color}30`,
-                  borderRadius:14, padding:'12px 8px', cursor:'pointer',
-                  color:t.color, fontSize:12, fontWeight:600,
-                  fontFamily:'DM Sans,sans-serif', textAlign:'center',
+                  background:`${t.color}10`, border:`1px solid ${t.color}28`,
+                  borderRadius:13, padding:'12px 8px', cursor:'pointer',
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:6,
                 }}>
-                  <div style={{fontSize:18, marginBottom:4}}>{t.icon}</div>
-                  {t.label}
+                  <t.Icon size={18} color={t.color}/>
+                  <span style={{color:t.color, fontSize:11, fontWeight:700, fontFamily:'DM Sans,sans-serif', textAlign:'center'}}>{t.label}</span>
                 </button>
               ))}
             </div>

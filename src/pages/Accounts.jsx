@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, Btn, PageTitle, Badge, EmptyState, Modal, colors } from '../components/Layout.jsx';
+import { Card, Btn, PageTitle, Badge, EmptyState, colors } from '../components/Layout.jsx';
+import { IcPlus, IcTrash, IcCheck } from '../components/Icons.jsx';
 import { api } from '../lib/api.js';
 const {G,P,V} = colors;
 
@@ -33,7 +34,7 @@ export default function Accounts() {
       <PageTitle
         title="Accounts"
         subtitle="MULTI-ACCOUNT"
-        right={<Btn onClick={connect} small>+ Connect</Btn>}
+        right={<Btn onClick={connect} small icon={<IcPlus size={13} color="#000"/>}>Connect</Btn>}
       />
 
       <div style={{padding:'0 16px'}}>

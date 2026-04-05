@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, StatCard, PageTitle, EmptyState, colors } from '../components/Layout.jsx';
+import { IcTrigger, IcFlow, IcLeads, IcCheck, IcClock, IcAnalytics } from '../components/Icons.jsx';
 import { api } from '../lib/api.js';
 const {G,P,V} = colors;
 
@@ -75,10 +76,10 @@ export default function Analytics() {
           : (<>
             {/* Stats */}
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16}}>
-              <StatCard label="Triggers Fired"  value={data?.triggersTotal}  color={G}       icon="◎"/>
-              <StatCard label="DMs Sent"        value={data?.dmsSent}        color={V}       icon="💬"/>
-              <StatCard label="Leads Captured"  value={data?.leadsTotal}     color="#FBBF24" icon="◉"/>
-              <StatCard label="Follow Verified" value={data?.followVerified} color={G}       icon="✓"/>
+              <StatCard label="Triggers Fired"  value={data?.triggersTotal}  color={G}       Icon={IcTrigger}/>
+              <StatCard label="DMs Sent"        value={data?.dmsSent}        color={V}       Icon={IcFlow}/>
+              <StatCard label="Leads Captured"  value={data?.leadsTotal}     color="#FBBF24" Icon={IcLeads}/>
+              <StatCard label="Follow Verified" value={data?.followVerified} color={G}       Icon={IcCheck}/>
             </div>
 
             {/* Activity chart */}
