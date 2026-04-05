@@ -1,70 +1,58 @@
-// ─── REAKTR · functions/webhook.js (MINIMAL - Syntax Verified) ───────────────
+// ─── REAKTR · Webhook Handler ─────────────────────────────────────────────────
 
 import { DB }          from './_db.js';
 import { Messenger }   from './_messenger.js';
 import { FlowEngine }  from './_flowEngine.js';
-import { verifySignature, matchesKeyword, CORS } from './_utils.js';
+import { verifySignature, matchesKeyword, rateLimit, CORS } from './_utils.js';
 
 export async function onRequest(context) {
+
   const { request, env, waitUntil } = context;
   const url = new URL(request.url);
 
-  // 🔐 GET: Meta verification
+  // ══════════════════════════════════════════════════════════
+  // 🔐 META VERIFICATION (FIXED)
+  // ══════════════════════════════════════════════════════════
   if (request.method === 'GET') {
-    const mode = url.searchParams.get('hub.mode');
-    const token = url.searchParams.get('hub.verify_token');
+    const mode      = url.searchParams.get('hub.mode');
+    const token     = url.searchParams.get('hub.verify_token');
     const challenge = url.searchParams.get('hub.challenge');
 
+    console.log('VERIFY REQUEST:', mode, token);
+
     if (mode === 'subscribe' && token === env.META_VERIFY_TOKEN) {
-      return new Response(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
+      return new Response(challenge, { status: 200 });
     }
-    return new Response('Forbidden', { status: 403, headers: { 'Content-Type': 'text/plain' } });
+
+    return new Response('Forbidden', { status: 403 });
   }
 
-  // 📩 POST: Webhook events
+  // ══════════════════════════════════════════════════════════
+  // 📩 INCOMING EVENTS
+  // ══════════════════════════════════════════════════════════
   if (request.method === 'POST') {
-    // Clone to preserve body stream
-    const rawBody = await request.clone().text();
-    const sig = request.headers.get('X-Hub-Signature-256') ?? '';
 
-    console.log('[WEBHOOK] POST received');
+    const rawBody = await request.text();
+    const sig     = request.headers.get('X-Hub-Signature-256') ?? '';
 
-    // 🔐 TEMP: Skip signature check for debugging (set to true to re-enable)
-    const SKIP_SIGNATURE = true;
-    
-    if (!SKIP_SIGNATURE && env.ENVIRONMENT !== 'development' && env.META_APP_SECRET) {
-      try {
-        const valid = await verifySignature(rawBody, sig, env.META_APP_SECRET);
-        if (!valid) {
-          return new Response('Invalid signature', { status: 401 });
-        }
-      } catch (e) {
-        console.error('[WEBHOOK] Signature check error:', e.message);
-        return new Response('Signature error', { status: 500 });
-      }
+    if (env.ENVIRONMENT !== 'development') {
+      const valid = await verifySignature(rawBody, sig, env.META_APP_SECRET);
+      if (!valid) return new Response('Invalid signature', { status: 401 });
     }
 
-    let body;
-    try {
-      body = JSON.parse(rawBody);
-    } catch (e) {      console.error('[WEBHOOK] JSON parse error:', e.message);
-      return new Response('Invalid JSON', { status: 400 });
-    }
+    const body = JSON.parse(rawBody);
 
-    console.log('[WEBHOOK] Object:', body.object);
+    console.log('WEBHOOK BODY:', JSON.stringify(body, null, 2));
 
-    // Process async (don't block response)
-    waitUntil(processEvent(body, env).catch(err => {
-      console.error('[WEBHOOK] processEvent error:', err.message);
-    }));
+    waitUntil(processEvent(body, env));
 
-    return new Response('OK', { status: 200, headers: { ...CORS, 'Content-Type': 'text/plain' } });
+    return new Response('OK', { status: 200, headers: CORS });
   }
 
-  return new Response('Method Not Allowed', { status: 405 });
+  return new Response('OK');
 }
 
-// ── Main event processor ─────────────────────────────────────
+// ── Main processor ────────────────────────────────────────────
 async function processEvent(body, env) {
   if (body.object !== 'instagram') return;
 
@@ -72,49 +60,57 @@ async function processEvent(body, env) {
   try {
     db = new DB(env);
     await db.init();
-  } catch (e) {
-    console.error('[DB] Init failed:', e.message);
+  } catch(e) {
+    console.error('[DB Init]', e.message);
     return;
   }
 
   for (const entry of body.entry ?? []) {
-    console.log('[ENTRY] ID:', entry.id);
 
-    // Find account
+    console.log('ENTRY ID:', entry.id);
+
+    // 🔥 FIXED ACCOUNT MATCH
     let account = await db.findOne('accounts', {
       $or: [
         { ig_id: entry.id },
-        { page_id: entry.id },
-        { instagram_id: entry.id }
+        { page_id: entry.id }
       ]
     });
 
     if (!account) {
-      console.error('[ACCOUNT] Not found:', entry.id);
+      console.error('NO ACCOUNT FOUND:', entry.id);
+
+      await db.insertOne('events', {
+        type:'webhook_no_account',
+        detail: `entry.id=${entry.id}`,
+        ts: new Date().toISOString(),
+      }).catch(()=>{});
+
       continue;
     }
 
-    console.log('[ACCOUNT] Found:', account.username);
+    console.log('ACCOUNT FOUND:', account.username);
 
-    // Get access token with fallback    const accessToken = account.page_access_token || env.META_PAGE_TOKEN;
-    if (!accessToken) {
-      console.error('[TOKEN] Missing for account:', account.username);
-      continue;
-    }
-
-    const msg = new Messenger(accessToken);
+    const msg    = new Messenger(account.page_access_token);
     const engine = new FlowEngine(db, msg, account);
 
-    // Handle comments
+    // ── Comment events ─────────────────────────────────────────
     for (const change of entry.changes ?? []) {
       if (change.field === 'comments') {
-        await handleComment(change.value, engine, db, account, env).catch(e => {
-          console.error('[COMMENT] Error:', e.message);
+        await handleComment(change.value, engine, db, account, env).catch(async e => {
+          console.error('handleComment ERROR:', e.message);
+
+          await db.insertOne('events', {
+            type:'error',
+            detail:`handleComment: ${e.message}`,
+            account_id: account.id,
+            ts: new Date().toISOString(),
+          }).catch(()=>{});
         });
       }
     }
 
-    // Handle messages
+    // ── Message events ─────────────────────────────────────────
     for (const ev of entry.messaging ?? []) {
       if (ev.postback?.payload) {
         await handlePostback(ev.postback.payload, ev.sender.id, engine).catch(()=>{});
@@ -129,131 +125,110 @@ async function processEvent(body, env) {
   }
 }
 
-// ── Handle comment ───────────────────────────────────────────
+// ── Handle comment ─────────────────────────────────────────────
 async function handleComment(comment, engine, db, account, env) {
   const { from, media, text, id: commentId } = comment;
 
-  console.log('[COMMENT] From:', from?.id, 'Text:', text?.slice(0, 30));
+  console.log('COMMENT RECEIVED:', text);
 
-  // Log event
-  try {
-    await db.insertOne('events', {
-      type: 'comment_received',
-      account_id: account.id,
-      ig_user_id: from?.id,
-      media_id: media?.id,
-      detail: text?.slice(0, 100),
-      ts: new Date().toISOString(),
-    });
-  } catch (e) { console.error('[DB] Event insert failed:', e.message); }
+  await db.insertOne('events', {
+    type      : 'comment_received',
+    account_id: account.id,
+    ig_user_id: from?.id,
+    media_id  : media?.id,
+    detail    : text?.slice(0,100),
+    ts        : new Date().toISOString(),
+  });
+
   if (!from?.id || !text) return;
 
-  // Dedupe check
   const seen = await db.findOne('processed_comments', { comment_id: commentId });
   if (seen) return;
 
-  try {
-    await db.insertOne('processed_comments', {
-      comment_id: commentId,
-      ig_user_id: from.id,
-      account_id: account.id,
-      ts: new Date().toISOString(),
-    });
-  } catch (e) { console.error('[DB] Dedupe insert failed:', e.message); }
+  await db.insertOne('processed_comments', {
+    comment_id: commentId,
+    ig_user_id: from.id,
+    account_id: account.id,
+    ts        : new Date().toISOString(),
+  });
 
-  // Skip rateLimit (no KV binding)
-  // const blocked = await rateLimit(env.KV, ...); if (blocked) return;
+  const blocked = await rateLimit(env.KV, `rl:${account.id}:${from.id}`, 20);
+  if (blocked) return;
 
-  // Find triggers
   const triggers = await db.find('triggers', { account_id: account.id, active: 1 });
-  console.log('[TRIGGER] Found:', triggers.length);
+
+  console.log('TRIGGERS FOUND:', triggers.length);
 
   for (const trigger of triggers) {
-    // Media filter
+
     if (trigger.media_id && trigger.media_id !== 'any' && trigger.media_id !== media?.id) continue;
 
-    // Keyword match
-    const { matched } = matchesKeyword(text, trigger);
+    const { matched, keyword } = matchesKeyword(text, trigger);
+
+    console.log('KEYWORD MATCH:', matched, 'TEXT:', text);
+
     if (!matched) continue;
 
-    console.log('[TRIGGER] Matched:', trigger.id);
-
-    // 1️⃣ Reply to comment
     if (trigger.comment_reply) {
-      try {
-        const msgr = new Messenger(account.page_access_token || env.META_PAGE_TOKEN);
-        await msgr.replyToComment(commentId, trigger.comment_reply);
-        console.log('[REPLY] Sent');
-      } catch (e) { console.error('[REPLY] Failed:', e.message); }
+      const msgr = new Messenger(account.page_access_token);
+      await msgr.replyToComment(commentId, trigger.comment_reply).catch(()=>{});
     }
 
-    // 2️⃣ Send DM ✅ Properly split lines
     if (trigger.dm_url) {
-      try {
-        const msgr = new Messenger(account.page_access_token || env.META_PAGE_TOKEN);
-        
-        // First DM: Text
-        await msgr.text(from.id, `Hey @${from.username || 'there'}! Thanks for your comment 💬`);
-                // Second DM: Button
-        await msgr.buttons(from.id, trigger.dm_button_label || 'Open Link', [
-          { type: 'url', title: trigger.dm_button_label || 'Open', url: trigger.dm_url },
-        ]);
-        
-        console.log('[DM] Sent initial + button');
-      } catch (e) { console.error('[DM] Failed:', e.message); }
+      const msgr = new Messenger(account.page_access_token);
+      await msgr.text(from.id, `Hey! Thanks for your comment.`);
+      await msgr.buttons(from.id, trigger.dm_button_label || 'Open:', [
+        { type: 'url', title: 'Open Link', url: trigger.dm_url },
+      ]);
     }
 
-    // 3️⃣ Start flow
     if (trigger.flow_id) {
-      try {
-        await db.updateOne('sessions',
-          { ig_user_id: from.id, flow_id: trigger.flow_id, status: 'active' },
-          { $set: { status: 'expired' } }
-        );
-        await engine.start(trigger.flow_id, from.id, {
-          comment: text,
-          media_id: media?.id,
-          trigger_id: trigger.id,
-        });
-        console.log('[FLOW] Started:', trigger.flow_id);
-      } catch (e) { console.error('[FLOW] Failed:', e.message); }
+      await db.updateOne('sessions',
+        { ig_user_id: from.id, flow_id: trigger.flow_id, status:'active' },
+        { $set: { status:'expired' } }
+      );
+
+      await engine.start(trigger.flow_id, from.id, {
+        comment   : text,
+        keyword,
+        media_id  : media?.id,
+        trigger_id: trigger.id,
+      });
     }
   }
 }
 
-// ── Postback handler ─────────────────────────────────────────
+// ── Postback ────────────────────────────────────────────
 async function handlePostback(payload, igUserId, engine) {
   if (!payload?.startsWith('RKT::')) return;
   const decoded = engine.decode(payload);
   if (!decoded) return;
 
-  if (decoded.action === 'STEP') {
-    await engine.resume(decoded.flowId, decoded.stepId, igUserId);
-  } else if (decoded.action === 'CHK_FOLLOW') {
-    await engine.checkFollow(decoded.flowId, decoded.stepId, igUserId);
+  switch (decoded.action) {
+    case 'STEP':       await engine.resume(decoded.flowId, decoded.stepId, igUserId); break;
+    case 'CHK_FOLLOW': await engine.checkFollow(decoded.flowId, decoded.stepId, igUserId); break;
   }
 }
 
-// ── Free text handler ────────────────────────────────────────
+// ── Free text ───────────────────────────────────────────
 async function handleFreeText(text, igUserId, engine, db, account) {
   const session = await db.findOne('sessions', {
     ig_user_id: igUserId,
     account_id: account.id,
-    awaiting: 'lead_input',
-    status: 'active',
+    awaiting  : 'lead_input',
+    status    : 'active',
   });
 
   if (!session) return;
-  try {
-    await db.insertOne('leads', {
-      account_id: account.id,
-      ig_user_id: igUserId,
-      flow_id: session.flow_id,
-      field: session.lead_field ?? 'email',
-      value: text,
-      ts: new Date().toISOString(),
-    });
-  } catch (e) { console.error('[DB] Lead insert failed:', e.message); }
+
+  await db.insertOne('leads', {
+    account_id: account.id,
+    ig_user_id: igUserId,
+    flow_id   : session.flow_id,
+    field     : session.lead_field ?? 'email',
+    value     : text,
+    ts        : new Date().toISOString(),
+  });
 
   await db.updateOne('sessions',
     { ig_user_id: igUserId, account_id: account.id },
