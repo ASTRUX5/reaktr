@@ -151,7 +151,7 @@ const db = new DB(env);
       const body   = await request.json();
       const result = await db.insertOne('flows', {
         ...body,
-        active    : true,
+        active    : 1,
         created_at: new Date().toISOString(),
       });
       return created({ id: result.insertedId });
@@ -190,7 +190,7 @@ const db = new DB(env);
       const body   = await request.json();
       const result = await db.insertOne('triggers', {
         ...body,
-        active    : true,
+        active    : 1,
         created_at: new Date().toISOString(),
       });
       return created({ id: result.insertedId });
