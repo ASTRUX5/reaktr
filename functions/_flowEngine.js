@@ -46,7 +46,7 @@ export class FlowEngine {
     // New session
     await this.db.insertOne('sessions', {
       ig_user_id : igUserId,
-      account_id : this.account._id,
+      account_id : this.account.id,
       flow_id    : flowId,
       step_id    : flow.steps[0]?.id ?? null,
       context    : triggerCtx,
@@ -190,10 +190,14 @@ export class FlowEngine {
   // ── Internals ─────────────────────────────────────────────────
   async _loadFlow(flowId) {
     try {
-      const flow = await this.db.findOne('flows', { _id: this.db.oid(flowId) });
-      if (!flow?.active) return null;
+      if (!flowId) return null;
+      // flowId is a plain UUID string from D1
+      const flow = await this.db.findOne('flows', { id: flowId });
+      if (!flow) return null;
+      if (flow.active === false || flow.active === 0) return null;
       return flow;
-    } catch {
+    } catch(e) {
+      console.error('[FlowEngine._loadFlow]', e.message);
       return null;
     }
   }
@@ -201,7 +205,7 @@ export class FlowEngine {
   async _log(type, data) {
     await this.db.insertOne('events', {
       type,
-      account_id: this.account._id,
+      account_id: this.account.id,
       ts        : new Date().toISOString(),
       ...data,
     });
