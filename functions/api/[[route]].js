@@ -23,7 +23,8 @@ export async function onRequest(context) {
   if (!authCheck(request, env)) return unauth();
   }
 
-const db = new DB({ env }); // ✅ FIXED
+const db = new DB(env);
+    await db.init();
 
   try {
     // ══════════════════════════════════════════════════════════
@@ -59,7 +60,7 @@ const db = new DB({ env }); // ✅ FIXED
       if (!code) return bad('Missing code');
 
       const tokenRes = await fetch(
-        `https://graph.facebook.com/v20.0/oauth/access_token` +
+        `https://graph.facebook.com/v25.0/oauth/access_token` +
         `?client_id=${env.META_APP_ID}` +
         `&client_secret=${env.META_APP_SECRET}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
@@ -74,7 +75,7 @@ const db = new DB({ env }); // ✅ FIXED
       );
 
       const pagesRes  = await fetch(
-        `https://graph.facebook.com/v20.0/me/accounts?access_token=${longToken}`
+        `https://graph.facebook.com/v25.0/me/accounts?access_token=${longToken}`
       );
       const pagesData = await pagesRes.json();
 
